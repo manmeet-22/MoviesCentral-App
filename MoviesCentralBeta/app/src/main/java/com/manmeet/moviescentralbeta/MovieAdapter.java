@@ -4,55 +4,32 @@ package com.manmeet.moviescentralbeta;
  * Created by Manmeet on 24-Oct-17.
  */
 
-import android.content.Context;
 import android.content.Intent;
 import android.support.v7.widget.RecyclerView;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
-import android.widget.GridView;
 import android.widget.ImageView;
 
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
-import java.util.List;
 
 
-public class MovieAdapter extends ArrayAdapter<Movie> {
+public class MovieAdapter extends RecyclerView.Adapter<MovieAdapter.MovieViewHolder> {
 
     private ArrayList<Movie> movieList;
-    private Context mContext;
 
-    public MovieAdapter(Context context, List<Movie> movie) {
-        super(context,0,movie);
-        mContext = context;
+    public MovieAdapter() {
+
     }
 
-    public View getView(int position, View convertView, ViewGroup parent) {
-        ImageView imageView;
-
-        if (convertView == null) {
-            imageView = new ImageView(mContext);
-            imageView.setLayoutParams(new GridView.LayoutParams(85, 85));
-            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            imageView.setPadding(8, 8, 8, 8);
-        }
-        else
-        {
-            imageView = (ImageView) convertView;
-        }
-        Movie currMovie = movieList.get(position);
-        Picasso.with(getContext()).load(currMovie.getImageURL()).into(holder.thumbView);
-        return imageView;
-    }
     public class MovieViewHolder extends RecyclerView.ViewHolder implements RecyclerView.OnClickListener{
         ImageView thumbView;
         public MovieViewHolder(View itemView) {
             super(itemView);
             thumbView = (ImageView) itemView.findViewById(R.id.movie_poster);
             itemView.setOnClickListener(this);
-
         }
 
         @Override
@@ -64,4 +41,35 @@ public class MovieAdapter extends ArrayAdapter<Movie> {
         }
     }
 
+    @Override
+    public MovieAdapter.MovieViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        View returnHolderView;
+        returnHolderView = LayoutInflater.from(parent.getContext()).inflate(R.layout.movie_list_item, parent, false);
+        return new MovieViewHolder(returnHolderView);
+    }
+
+    @Override
+    public void onBindViewHolder(MovieAdapter.MovieViewHolder holder, int position) {
+        Movie currMovie = movieList.get(position);
+        Picasso.with(holder.itemView.getContext())
+                .load(currMovie.getImageURL())
+                .placeholder(R.drawable.no_poster)
+                .error(R.drawable.error_image).
+                into(holder.thumbView);
+    }
+
+    @Override
+    public int getItemCount() {
+        if (movieList != null)
+            return movieList.size();
+        else
+            return 0;
+    }
+
+    public void setMovieData(ArrayList<Movie> list) {
+        if (movieList != null)
+            movieList.clear();
+        movieList = list;
+        notifyDataSetChanged();
+    }
 }

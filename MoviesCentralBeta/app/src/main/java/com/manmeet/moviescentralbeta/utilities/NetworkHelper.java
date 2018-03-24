@@ -38,9 +38,9 @@ public class NetworkHelper {
                 .appendQueryParameter(PARAM_RELEASE, year);
 
         if (sortByRating)
-            builder.appendQueryParameter(PARAM_SORT, "popularity.desc");
+            builder.appendQueryParameter(PARAM_SORT, "popular");
         else
-            builder.appendQueryParameter(PARAM_SORT, "vote_average.desc");
+            builder.appendQueryParameter(PARAM_SORT, "top_rated");
         uri = builder.build();
         try {
             url = new URL(uri.toString());

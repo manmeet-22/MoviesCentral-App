@@ -9,14 +9,12 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.GridView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.manmeet.moviescentralbeta.utilities.JSONHelper;
 import com.manmeet.moviescentralbeta.utilities.NetworkHelper;
-import com.manmeet.moviescentralbeta.utilities.Utility;
 
 import org.json.JSONException;
 
@@ -24,15 +22,12 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
 
-import butterknife.BindView;
-import butterknife.ButterKnife;
-
 public class MainActivity extends AppCompatActivity {
 
-    @BindView(R.id.grid) GridView mGridView;
-    @BindView(R.id.error_message) TextView mErrorMessage;
-    @BindView(R.id.loading) ProgressBar mProgressBar;
-    MovieAdapter mMovieAdapter;
+    private RecyclerView mRecyclerView;
+    private MovieAdapter mMovieAdapter;
+    private TextView mErrorMessage;
+    private ProgressBar mProgressBar;
     private ArrayList<Movie> movieArrayList;
     private Boolean sortByRating = true;
     private Toast mToast;
@@ -43,11 +38,19 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        ButterKnife.bind(this);
-        mNoOfColumns = Utility.calculateNoOfColumns(getApplicationContext());
+        mRecyclerView = (RecyclerView) findViewById(R.id.recycler);
+        mErrorMessage = (TextView) findViewById(R.id.error_message);
+        mProgressBar = (ProgressBar) findViewById(R.id.loading);
+        if( getResources().getConfiguration().orientation == 1) mNoOfColumns = 2;
+            else mNoOfColumns = 3;
+
         movieArrayList= new ArrayList<Movie>();
-        mMovieAdapter = new MovieAdapter(this);
-        mGridView.setAdapter(mMovieAdapter);
+
+        GridLayoutManager grid = new GridLayoutManager(this,mNoOfColumns);
+        mRecyclerView.setLayoutManager(grid);
+        mRecyclerView.setHasFixedSize(true);
+        mMovieAdapter = new MovieAdapter();
+        mRecyclerView.setAdapter(mMovieAdapter);
         new MovieAsyncTask().execute("okay");
     }
 
@@ -117,14 +120,14 @@ public class MainActivity extends AppCompatActivity {
         protected void onPreExecute() {
             super.onPreExecute();
             mProgressBar.setVisibility(View.VISIBLE);
-            mGridView.setVisibility(View.INVISIBLE);
+            mRecyclerView.setVisibility(View.INVISIBLE);
         }
 
         @Override
         protected void onPostExecute(ArrayList<Movie> movies) {
             mMovieAdapter.setMovieData(movies);
             mProgressBar.setVisibility(View.INVISIBLE);
-            mGridView.setVisibility(View.VISIBLE);
+            mRecyclerView.setVisibility(View.VISIBLE);
         }
     }
 
