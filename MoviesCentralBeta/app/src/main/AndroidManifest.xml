@@ -2,6 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.manmeet.moviescentralbeta">
 
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET"/>
 
     <application
@@ -20,6 +21,9 @@
         </activity>
         <activity android:name=".DetailActivity" android:label="Movie Details"
             android:parentActivityName="com.manmeet.moviescentralbeta.MainActivity"/>
+        <provider
+            android:authorities="com.manmeet.moviescentralbeta.Database"
+            android:name=".Database.MovieContentProvider"/>
     </application>
 
 </manifest>

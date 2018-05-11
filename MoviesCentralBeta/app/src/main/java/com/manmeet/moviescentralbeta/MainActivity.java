@@ -1,8 +1,14 @@
 package com.manmeet.moviescentralbeta;
 
-import android.os.AsyncTask;
+import android.content.res.Configuration;
+import android.database.Cursor;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
@@ -13,50 +19,110 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.manmeet.moviescentralbeta.utilities.JSONHelper;
-import com.manmeet.moviescentralbeta.utilities.NetworkHelper;
+import com.facebook.stetho.Stetho;
+import com.manmeet.moviescentralbeta.Adapters.MovieAdapter;
+import com.manmeet.moviescentralbeta.Database.MoviesContract;
+import com.manmeet.moviescentralbeta.Pojos.movie_details.MovieDetail;
+import com.manmeet.moviescentralbeta.Retrofit.ApiInterface;
+import com.manmeet.moviescentralbeta.Retrofit.ServiceGenerator;
+import com.manmeet.moviescentralbeta.Pojos.movie.DiscoverMovies;
+import com.manmeet.moviescentralbeta.Pojos.movie.DiscoverMoviesResults;
 
-import org.json.JSONException;
-
-import java.io.IOException;
-import java.net.URL;
 import java.util.ArrayList;
+import java.util.List;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+import static com.manmeet.moviescentralbeta.ApiUtility.API_KEY;
 
 public class MainActivity extends AppCompatActivity {
 
-    private RecyclerView mRecyclerView;
-    private MovieAdapter mMovieAdapter;
-    private TextView mErrorMessage;
-    private ProgressBar mProgressBar;
-    private ArrayList<Movie> movieArrayList;
-    private Boolean sortByRating = true;
+    static final String TAG = "MainActivity";
+    static final String SORT_TOP_RATED = "top_rated";
+    static final String SORT_POPULARITY = "popular";
     private Toast mToast;
-    private int mNoOfColumns ;
+    private int mNoOfColumns;
+    private int visibleItemIndex = 0;
+    private MovieAdapter mMovieAdapter;
+    private GridLayoutManager mLayoutManager;
+    private List<DiscoverMoviesResults> movies;
+    private TextView mErrorMessage;
+    private RecyclerView mRecyclerView;
+    private ProgressBar mProgressBar;
+    private String movieType ;
 
+
+    /*
+    @BindView(R.id.main_recyclerView_movies) RecyclerView mRecyclerView;
+    @BindView(R.id.error_message) TextView mErrorMessage;
+    @BindView(R.id.loading) ProgressBar mProgressBar;
+*/
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mRecyclerView = (RecyclerView) findViewById(R.id.recycler);
-        mErrorMessage = (TextView) findViewById(R.id.error_message);
-        mProgressBar = (ProgressBar) findViewById(R.id.loading);
-        if( getResources().getConfiguration().orientation == 1) mNoOfColumns = 2;
-            else mNoOfColumns = 3;
+        mRecyclerView = findViewById(R.id.main_recyclerView_movies);
+        mErrorMessage = findViewById(R.id.error_message);
+        mProgressBar = findViewById(R.id.loading);
+        movies = new ArrayList<>();
+        movieType = SORT_POPULARITY;
+        //Stetho for DB testing
+        Stetho.initializeWithDefaults(this);
 
-        movieArrayList= new ArrayList<Movie>();
+        // Check for network connectivity
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetorkInfo = connectivityManager.getActiveNetworkInfo();
+        if (activeNetorkInfo != null && !activeNetorkInfo.isConnected()) {
+            mRecyclerView.setVisibility(View.GONE);
+            mErrorMessage.setVisibility(View.VISIBLE);
+            mProgressBar.setVisibility(View.GONE);
+        } else {
+            mErrorMessage.setVisibility(View.GONE);
+        }
 
-        GridLayoutManager grid = new GridLayoutManager(this,mNoOfColumns);
-        mRecyclerView.setLayoutManager(grid);
+        int orientation = this.getResources().getConfiguration().orientation;
+        if (orientation == Configuration.ORIENTATION_PORTRAIT) {
+            mLayoutManager = new GridLayoutManager(this, 2);
+        } else {
+            mLayoutManager = new GridLayoutManager(this, 3);
+        }
+
+        mRecyclerView.setLayoutManager(mLayoutManager);
         mRecyclerView.setHasFixedSize(true);
-        mMovieAdapter = new MovieAdapter();
-        mRecyclerView.setAdapter(mMovieAdapter);
-        new MovieAsyncTask().execute("okay");
+        mRecyclerView.setItemAnimator(new DefaultItemAnimator());
+        if (savedInstanceState != null) {
+            Log.d(TAG, "onCreate: savedInstanceState != null");
+
+            movies = savedInstanceState.getParcelableArrayList("movies_list");
+            movieType = savedInstanceState.getString("movie_type");
+            mMovieAdapter = new MovieAdapter(this, movies);
+            mRecyclerView.setAdapter(mMovieAdapter);
+            setTitle(savedInstanceState.getString("title"));
+            visibleItemIndex = savedInstanceState.getInt("index");
+            Log.d(TAG, "onCreate: visibleItemIndex " + String.valueOf(visibleItemIndex));
+            new Handler().postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    mRecyclerView.scrollToPosition(visibleItemIndex);
+                    mLayoutManager.scrollToPosition(visibleItemIndex);
+                }
+            }, 500);
+            mProgressBar.setVisibility(View.GONE);
+        } else {
+            Log.d(TAG, "onCreate: savedInstanceState == null");
+            mMovieAdapter = new MovieAdapter(this, movies);
+            mRecyclerView.setAdapter(mMovieAdapter);
+            getMovies(movieType);
+        }
+
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main_menu,menu);
+        getMenuInflater().inflate(R.menu.main_menu, menu);
         return true;
     }
 
@@ -66,69 +132,124 @@ public class MainActivity extends AppCompatActivity {
         int id = item.getItemId();
 
         switch (id) {
-            case R.id.refresh_main_menu_item:
-                new MovieAsyncTask().execute("Place");
-                if (mToast != null)
-                    mToast.cancel();
-                mToast = Toast.makeText(MainActivity.this, "Refresh!", Toast.LENGTH_SHORT);
-                mToast.show();
-                break;
             case R.id.recent_main_menu_item:
-                sortByRating = false;
-                new MovieAsyncTask().execute("Place");
+                setTitle("Popular Movies");
+                getMovies(SORT_POPULARITY);
                 if (mToast != null)
                     mToast.cancel();
                 mToast = Toast.makeText(MainActivity.this, "Sorting By Popularity", Toast.LENGTH_SHORT);
                 mToast.show();
                 break;
             case R.id.rating_main_menu_item:
-                sortByRating = true;
-                new MovieAsyncTask().execute("Place");
+                setTitle("Top Rated Movies");
+                getMovies(SORT_TOP_RATED);
                 if (mToast != null)
                     mToast.cancel();
                 mToast = Toast.makeText(MainActivity.this, "Sorting By Rating", Toast.LENGTH_SHORT);
                 mToast.show();
                 break;
+            case R.id.favourite_main_menu_item:
+                String[] projections = new String[]{MoviesContract.MovieProvider._ID, MoviesContract.MovieProvider.MOVIE_ID};
+                Cursor cursor = getContentResolver().query(
+                        Uri.withAppendedPath(MoviesContract.BASE_URI,MoviesContract.MovieProvider.PATH_TABLE),
+                        projections,null,null,null);
+                cursor.moveToFirst();
+                ArrayList<String> movieIds = new ArrayList<String>();
+                for (int i=0;i<cursor.getCount();i++){
+                    String movieId = cursor.getString(cursor.getColumnIndex(MoviesContract.MovieProvider.MOVIE_ID));
+                    cursor.moveToNext();
+                    movieIds.add(movieId);
+                }
+                cursor.close();
+                getFavMovies(movieIds);
+                if (mToast != null)
+                    mToast.cancel();
+                mToast = Toast.makeText(MainActivity.this, "Showing Favourites", Toast.LENGTH_SHORT);
+                mToast.show();
+                mRecyclerView.setAdapter(mMovieAdapter);
+                mMovieAdapter.notifyDataSetChanged();
+
+                break;
         }
         return true;
     }
 
-    public class MovieAsyncTask extends AsyncTask<String, Void, ArrayList<Movie>>{
-        @Override
-        protected ArrayList<Movie> doInBackground(String... strings) {
-            URL url = NetworkHelper.buildURL(sortByRating);
-            String http_data = null;
-            ArrayList<Movie> returnMovieList = null;
-            try {
-                http_data = NetworkHelper.getHTTPData(url);
-            } catch (IOException e) {
-                Log.e(getLocalClassName(), "doInBackground: BAD RESPONSE FROM HTTP HELPER");
-                e.printStackTrace();
+    private void getFavMovies(ArrayList<String> movieIds) {
+        ApiInterface apiInterface = ServiceGenerator.createService(ApiInterface.class);
+        Call<MovieDetail> call ;
+        movies.clear();
+        for (int i=0;i<movieIds.size();i++){
+            call = apiInterface.getMovieDetails(movieIds.get(i),API_KEY,"images");
+            call.enqueue(new Callback<MovieDetail>() {
+                @Override
+                public void onResponse(Call<MovieDetail> call, Response<MovieDetail> response) {
+                    if (response!=null && response.body()!=null){
+                        MovieDetail movieDetail = response.body();
+                        String id = movieDetail.getId();
+                        String posterPath = movieDetail.getPosterPath();
+                        DiscoverMoviesResults results = new DiscoverMoviesResults(id,posterPath);
+                        movies.add(results);
+                        mMovieAdapter.notifyDataSetChanged();
+                    }
+
+                }
+
+                @Override
+                public void onFailure(Call<MovieDetail> call, Throwable t) {
+                    Log.d(TAG, "onFailure: Failed to fetch Favourites");
+                }
+
+            });
+            if(i == movieIds.size() - 1) {
+                mMovieAdapter.notifyDataSetChanged();
+                Log.d(TAG, "getFavMovies: Adapter Updated");
             }
-            try {
-                returnMovieList = JSONHelper.getArrayListFromJSON(http_data);
-            } catch (JSONException e) {
-                Log.e(getLocalClassName(), "doInBackground: BAD RESPONSE FROM JSON HELPER");
-                e.printStackTrace();
-            }
-
-            return returnMovieList;
-
         }
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
-            mProgressBar.setVisibility(View.VISIBLE);
-            mRecyclerView.setVisibility(View.INVISIBLE);
-        }
-
-        @Override
-        protected void onPostExecute(ArrayList<Movie> movies) {
-            mMovieAdapter.setMovieData(movies);
-            mProgressBar.setVisibility(View.INVISIBLE);
-            mRecyclerView.setVisibility(View.VISIBLE);
+        if(movies.size() > 0) {
+            Log.d(TAG, "getFavMovies: size : " + movies.size());
+            mRecyclerView.setAdapter(mMovieAdapter);
+            mMovieAdapter.notifyDataSetChanged();
         }
     }
 
+    public void getMovies(String sort_by) {
+        ApiInterface apiInterface = ServiceGenerator.createService(ApiInterface.class);
+        Call<DiscoverMovies> call = apiInterface.getMovies(sort_by, API_KEY);
+        call.enqueue(new Callback<DiscoverMovies>() {
+            @Override
+            public void onResponse(Call<DiscoverMovies> call, retrofit2.Response<DiscoverMovies> response) {
+                movies.clear();
+                DiscoverMovies discoverMovies = response.body();
+                movies.addAll(discoverMovies.getResults());
+                for (int i = 0; i < movies.size(); i++) {
+                    if (movies.get(i).getPosterPath() == null || movies.get(i).getPosterPath().contains("null")
+                            || movies.get(i).equals("null"))
+                        movies.remove(i);
+                }
+                mRecyclerView.setAdapter(mMovieAdapter);
+                mProgressBar.setVisibility(View.GONE);
+            }
+
+            @Override
+            public void onFailure(Call<DiscoverMovies> call, Throwable t) {
+                Log.v(TAG, "onFailure()");
+            }
+        });
+    }
+
+    /**
+     * Save the instance of the state when user navigates away from the activity.
+     *
+     * @param outState : Bundle in which the state is saved.
+     */
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putString("movie_type",movieType);
+        outState.putParcelableArrayList("movies_list", (ArrayList<DiscoverMoviesResults>) movies);
+        int index = mLayoutManager.findFirstCompletelyVisibleItemPosition();
+        outState.putInt("index", index);
+        outState.putString("title", (String) getTitle());
+        Log.d(TAG, "onSaveInstanceState: index = " + String.valueOf(index));
+    }
 }

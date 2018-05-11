@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Movies Central Beta</string>
+    <string name="app_name">Movies Central</string>
     <string name="error_message">Network Error</string>
     <string name="tools_movie_name">Movie Name</string>
     <string name="tools_movie_rating">Movie Rating</string>
@@ -8,4 +8,13 @@
     <string name="menu_refresh">Refresh</string>
     <string name="menu_sort_by_popularity">Sort By Popularity</string>
     <string name="menu_sort_by_rating">Sort By Rating</string>
+    <string name="label_trailers">Trailers</string>
+    <string name="label_reviews">Reviews</string>
+    <string name="menu_sort_by_fav">Show Favourites</string>
+    <string name="label_button_add_to_fav">Add to Fav</string>
+    <string name="tools_movie_photos">Gallery</string>
+    <string name="tools_movie_cast">Cast</string>
+    <string name="tools_movie_videos">Videos</string>
+    <string name="tools_movie_user_reviews">Reviews</string>
+    <string name="time_min">min</string>
 </resources>
