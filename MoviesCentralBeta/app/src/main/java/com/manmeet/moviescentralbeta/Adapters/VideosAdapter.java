@@ -5,18 +5,21 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 
-import com.manmeet.moviescentralbeta.R;
 import com.manmeet.moviescentralbeta.Pojos.movie_images.Backdrops;
 import com.manmeet.moviescentralbeta.Pojos.movie_videos.VideoResults;
+import com.manmeet.moviescentralbeta.R;
 import com.squareup.picasso.Picasso;
 
 import java.util.List;
+
+import static android.content.ContentValues.TAG;
 
 /**
  * Created by manmeet on 28/3/18.
@@ -42,22 +45,25 @@ public class VideosAdapter extends RecyclerView.Adapter<VideosAdapter.VideoHolde
     @Override
     public void onBindViewHolder(VideoHolder holder, int position) {
         final VideoResults videoResult = mVideoList.get(position);
-        int pos = position;
+        int pos = 0;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             holder.videoView.setImageAlpha(120);
         }
-        try {
+        //As there were noi thumbnails to the videos I decided to use the images that we get through backdrops as the thumbnails
+        // for the videos but in reverse order.
+        if ((mPhotosList.size() - position - 1) > -1) {
+            //Log.d(TAG, "onBindViewHolder: Image Position - " + position + " == Pos - " + pos);
             Picasso.with(mContext).load("https://image.tmdb.org/t/p/w500" + mPhotosList.get(mPhotosList.size() - position - 1).getFilePath()).into(holder.videoView);
-        } catch (Exception e){
-            Picasso.with(mContext).load("https://image.tmdb.org/t/p/w500" + mPhotosList.get(mPhotosList.size() - pos - 1).getFilePath()).into(holder.videoView);
         }
-
     }
 
     @Override
     public int getItemCount() {
-        if (mVideoList != null)
-            return mVideoList.size();
+        // Normally we return size of the mVideoList, but there are some movies in which,
+        // number of images are less than number of videos.
+        // This causes the app to crash. Tried other ways but none worked.
+        if (mPhotosList != null)
+            return mPhotosList.size();
         else
             return 0;
     }
@@ -82,6 +88,5 @@ public class VideosAdapter extends RecyclerView.Adapter<VideosAdapter.VideoHolde
             v.getContext().startActivity(i);
         }
     }
-
 
 }

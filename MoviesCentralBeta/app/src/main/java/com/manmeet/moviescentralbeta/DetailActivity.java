@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.design.widget.TabLayout;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.ViewPager;
@@ -24,7 +25,6 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
-import com.facebook.stetho.Stetho;
 import com.manmeet.moviescentralbeta.Adapters.CategoryAdapter;
 import com.manmeet.moviescentralbeta.Adapters.GenreAdapter;
 import com.manmeet.moviescentralbeta.Adapters.MovieAdapter;
@@ -35,6 +35,7 @@ import com.manmeet.moviescentralbeta.Pojos.movie_details.MovieDetail;
 import com.manmeet.moviescentralbeta.Pojos.movie_details.ReviewResults;
 import com.manmeet.moviescentralbeta.Pojos.movie_details.Reviews;
 import com.manmeet.moviescentralbeta.Pojos.movie_videos.VideoResults;
+import com.manmeet.moviescentralbeta.Pojos.movie_videos.Videos;
 import com.manmeet.moviescentralbeta.Retrofit.ApiInterface;
 import com.manmeet.moviescentralbeta.Retrofit.ServiceGenerator;
 import com.squareup.picasso.Picasso;
@@ -57,6 +58,9 @@ import static com.manmeet.moviescentralbeta.ApiUtility.API_KEY;
 public class DetailActivity extends AppCompatActivity {
 
     private static final String TAG = "DetailActivity";
+    public static List<VideoResults> mVideosList;
+    public static String id;
+    private static ApiInterface mApiInterface;
     public Context mContext;
     @BindView(R.id.detail_textView_movie_title)
     TextView mTitleText;
@@ -89,8 +93,7 @@ public class DetailActivity extends AppCompatActivity {
     private MovieAdapter mMovieAdapter;
     private GenreAdapter mGenreAdpater;
     private ReviewsAdapter mReviewsAdapter;
-    private ApiInterface mApiInterface;
-    public static String id;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -101,6 +104,7 @@ public class DetailActivity extends AppCompatActivity {
                 WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         getSupportActionBar().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
 
+        mVideosList = new ArrayList<>();
         mApiInterface = ServiceGenerator.createService(ApiInterface.class);
         Intent input_intent = getIntent();
         id = input_intent.getStringExtra("id");
@@ -117,6 +121,8 @@ public class DetailActivity extends AppCompatActivity {
         mReviewsAdapter = new ReviewsAdapter(this, mReviewsList);
         mGenreAdpater = new GenreAdapter(this, mGenresList);
 
+        mVideosList = new ArrayList<>();
+
     }
 
     /* Get the details of a particular movie.
@@ -124,7 +130,7 @@ public class DetailActivity extends AppCompatActivity {
      * @return
      */
     private MovieDetail getMovieDetails(String id) {
-        //Log.d(TAG, "getMovieDetails: " + id);
+        Log.i(TAG, "getMovieDetails: " + id);
         Call<MovieDetail> call = mApiInterface.getMovieDetails(id, API_KEY, "images");
         call.enqueue(new Callback<MovieDetail>() {
             @Override
@@ -158,25 +164,27 @@ public class DetailActivity extends AppCompatActivity {
         };
 
         final Cursor cursor = getContentResolver().query(
-                Uri.withAppendedPath(MoviesContract.BASE_URI,MoviesContract.MovieProvider.PATH_TABLE),
-                projections,null,null,null);
+                Uri.withAppendedPath(MoviesContract.BASE_URI, MoviesContract.MovieProvider.PATH_TABLE),
+                projections, null, null, null);
 
         cursor.moveToFirst();
 
         boolean isFavourite = false;
-        for (int i =0;i<cursor.getCount();i++){
+        for (int i = 0; i < cursor.getCount(); i++) {
             String movieId = cursor.getString(cursor.getColumnIndex(MoviesContract.MovieProvider.MOVIE_ID));
-            if (movieId.equals(movieDetail.getId())){
-                isFavourite = true; 
+            if (movieId.equals(movieDetail.getId())) {
+                isFavourite = true;
                 break;
             }
             cursor.moveToNext();
         }
         cursor.close();
-        if (isFavourite){
+        if (isFavourite) {
             mFavButton.setChecked(true);
+            mFavButton.setBackgroundDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_favorite));
         } else {
             mFavButton.setChecked(false);
+            mFavButton.setBackgroundDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_favorite_border));
         }
         mFavButton.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -186,18 +194,21 @@ public class DetailActivity extends AppCompatActivity {
                 cursor.moveToFirst();
                 if (isChecked) {
                     //Log.d(TAG, "onCheckedChanged: True");
-                    //mFavButton.setBackgroundDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_star_yellow));
+                    mFavButton.setBackgroundDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_favorite));
                     cursor.moveToFirst();
                     boolean isFav = false;
-                    for(int i=0; i < cursor.getCount();i++){
+                    for (int i = 0; i < cursor.getCount(); i++) {
                         String id = cursor.getString(cursor.getColumnIndex(MoviesContract.MovieProvider.MOVIE_ID));
-                        if(movieDetail.getId().equals(id)) {
+                        if (movieDetail.getId().equals(id)) {
                             isFav = true;
                         }
                         cursor.moveToNext();
                     }
                     if (!isFav) {
                         //Log.d(TAG, "onCheckedChanged: Add item to DB");
+
+                        mFavButton.setBackgroundDrawable(ContextCompat.getDrawable(getApplicationContext(),
+                                R.drawable.ic_favorite));
                         ContentValues values = new ContentValues();
                         values.put(MoviesContract.MovieProvider.MOVIE_ID, movieDetail.getId());
                         getContentResolver().insert(
@@ -207,22 +218,25 @@ public class DetailActivity extends AppCompatActivity {
                 } else {
                     //Log.d(TAG, "onCheckedChanged: Delete item from DB");
                     int rowId = 0;
+                    mFavButton.setBackgroundDrawable(ContextCompat.getDrawable(getApplicationContext(), R.drawable.ic_favorite_border));
                     cursor.moveToFirst();
-                    for(int i=0; i < cursor.getCount();i++){
+                    for (int i = 0; i < cursor.getCount(); i++) {
                         String id = cursor.getString(cursor.getColumnIndex(MoviesContract.MovieProvider.MOVIE_ID));
-                        if(movieDetail.getId().equals(id)) {
+                        if (movieDetail.getId().equals(id)) {
                             rowId = cursor.getInt(cursor.getColumnIndex(MoviesContract.MovieProvider._ID));
                         }
                         cursor.moveToNext();
                     }
                     getContentResolver().delete(ContentUris.withAppendedId(
                             Uri.withAppendedPath(MoviesContract.BASE_URI, MoviesContract.MovieProvider.PATH_TABLE), rowId),
-                            null,null);
+                            null, null);
                 }
                 cursor.close();
             }
         });
 
+        getVideos(id);
+        Log.i(TAG, "UpdateDetailActivity: " + mVideosList.size());
         mPoster.setImageAlpha(150);
         Picasso.with(mContext).load("https://image.tmdb.org/t/p/w500" + movieDetail.getBackdropPath()).into(mPoster);
         Picasso.with(mContext).load("https://image.tmdb.org/t/p/w500" + movieDetail.getBackdropPath())
@@ -255,9 +269,39 @@ public class DetailActivity extends AppCompatActivity {
     }
 
     /**
-     * Get the user reviews for a particular movie / tv season.
+     * Update the UI to show the video in the VideoFragment of the movie.
      *
-     * @param id : id of the tv show / movie whose reviews are needed.
+     * @param id - Id of the current Movie
+     */
+    public void getVideos(@NonNull String id) {
+        Call<Videos> call;
+        Log.i(TAG, "getVideos: hi there!!");
+        mApiInterface = ServiceGenerator.createService(ApiInterface.class);
+        final List[] results = new List[]{new ArrayList<VideoResults>()};
+        call = mApiInterface.getVideos(id, API_KEY);
+        call.enqueue(new Callback<Videos>() {
+            @Override
+            public void onResponse(Call<Videos> call, Response<Videos> response) {
+                Videos videos = response.body();
+                if (videos != null) {
+                    results[0] = videos.getResults();
+                    mVideosList.addAll(results[0]);
+                    setThumbnailVideo(mVideosList.get(0));
+                    Log.i(TAG, "onResponse: videos fetched " + videos.getResults().size());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<Videos> call, Throwable t) {
+                Log.d(TAG, "onFailure: Failed to get videos");
+            }
+        });
+    }
+
+    /**
+     * Get the user reviews for a particular movie season.
+     *
+     * @param id : id of the movie whose reviews are needed.
      */
     private void getReviews(String id) {
         Call<Reviews> call;

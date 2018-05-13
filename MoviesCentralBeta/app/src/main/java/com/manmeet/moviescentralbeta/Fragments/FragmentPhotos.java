@@ -1,9 +1,6 @@
 package com.manmeet.moviescentralbeta.Fragments;
 
-
-import android.content.Context;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -12,11 +9,8 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import com.manmeet.moviescentralbeta.Adapters.CastAdapter;
 import com.manmeet.moviescentralbeta.Adapters.PhotosAdapter;
 import com.manmeet.moviescentralbeta.DetailActivity;
-import com.manmeet.moviescentralbeta.Pojos.movie_details.Cast;
-import com.manmeet.moviescentralbeta.Pojos.movie_details.Credits;
 import com.manmeet.moviescentralbeta.Pojos.movie_details.MovieDetail;
 import com.manmeet.moviescentralbeta.Pojos.movie_images.Backdrops;
 import com.manmeet.moviescentralbeta.R;
@@ -33,19 +27,19 @@ import retrofit2.Response;
 import static android.content.ContentValues.TAG;
 import static com.manmeet.moviescentralbeta.ApiUtility.API_KEY;
 
-public class FragmentPhotos extends android.support.v4.app.Fragment{
+public class FragmentPhotos extends android.support.v4.app.Fragment {
     /*@BindView(R.id.fragment_recycler_list)
     RecyclerView mCastRecycler;
     */
     private RecyclerView mPhotosRecycler;
     private List<Backdrops> mPhotosList;
     private PhotosAdapter mPhotosAdapter;
-    private String id ;
+    private String id;
     private ApiInterface mApiInterface;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                         Bundle savedInstanceState) {
+                             Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         View rootView = inflater.inflate(R.layout.fragment_list, container, false);
         mPhotosRecycler = rootView.findViewById(R.id.fragment_recycler_list);
@@ -85,7 +79,6 @@ public class FragmentPhotos extends android.support.v4.app.Fragment{
         mPhotosList.addAll(movieDetail.getImages().getBackdrops());
         mPhotosList.remove(0);
         mPhotosAdapter.notifyDataSetChanged();
-
 
     }
 

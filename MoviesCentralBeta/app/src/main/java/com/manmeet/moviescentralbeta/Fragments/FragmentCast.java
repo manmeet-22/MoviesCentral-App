@@ -1,6 +1,5 @@
 package com.manmeet.moviescentralbeta.Fragments;
 
-
 import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
@@ -11,11 +10,8 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import com.manmeet.moviescentralbeta.Adapters.CastAdapter;
-import com.manmeet.moviescentralbeta.Adapters.GenreAdapter;
-import com.manmeet.moviescentralbeta.Adapters.PhotosAdapter;
 import com.manmeet.moviescentralbeta.DetailActivity;
 import com.manmeet.moviescentralbeta.Pojos.movie_details.Cast;
 import com.manmeet.moviescentralbeta.Pojos.movie_details.Credits;
@@ -27,7 +23,6 @@ import com.manmeet.moviescentralbeta.Retrofit.ServiceGenerator;
 import java.util.ArrayList;
 import java.util.List;
 
-import butterknife.BindView;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -35,20 +30,20 @@ import retrofit2.Response;
 import static android.content.ContentValues.TAG;
 import static com.manmeet.moviescentralbeta.ApiUtility.API_KEY;
 
-public class FragmentCast extends android.support.v4.app.Fragment{
+public class FragmentCast extends android.support.v4.app.Fragment {
     /*@BindView(R.id.fragment_recycler_list)
     RecyclerView mCastRecycler;
     */
     private RecyclerView mCastRecycler;
     private List<Cast> mCastList;
     private CastAdapter mCastAdapter;
-    private String id ;
+    private String id;
     private ApiInterface mApiInterface;
     private Context context;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                         Bundle savedInstanceState) {
+                             Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         View rootView = inflater.inflate(R.layout.fragment_list, container, false);
         mCastRecycler = rootView.findViewById(R.id.fragment_recycler_list);
@@ -87,6 +82,7 @@ public class FragmentCast extends android.support.v4.app.Fragment{
         getCredits(id);
 
     }
+
     /**
      * Get the credits information of the tv show or the movie. It includes the crew and cast information.
      *
@@ -96,7 +92,8 @@ public class FragmentCast extends android.support.v4.app.Fragment{
     @Nullable
     private Credits getCredits(String id) {
         /*Log.d(TAG, "getMovieCredits: ");
-       */ Call<Credits> call;
+         */
+        Call<Credits> call;
         call = mApiInterface.getMovieCredits(id, API_KEY);
         call.enqueue(new Callback<Credits>() {
             @Override
@@ -117,9 +114,9 @@ public class FragmentCast extends android.support.v4.app.Fragment{
     }
 
     /**
-     * Update the UI to show the cast members of the tv show or movie.
+     * Update the UI to show the cast members of the movie.
      *
-     * @param cast : List of all the cast members of the tv show or the movie.
+     * @param cast : List of all the cast members of the movie.
      */
     private void updateCast(List<Cast> cast) {
         if (cast != null) {

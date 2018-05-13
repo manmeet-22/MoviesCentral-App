@@ -3,6 +3,7 @@ package com.manmeet.moviescentralbeta.Fragments;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -13,6 +14,7 @@ import android.view.ViewGroup;
 
 import com.manmeet.moviescentralbeta.Adapters.VideosAdapter;
 import com.manmeet.moviescentralbeta.DetailActivity;
+import com.manmeet.moviescentralbeta.MainActivity;
 import com.manmeet.moviescentralbeta.Pojos.movie_details.MovieDetail;
 import com.manmeet.moviescentralbeta.Pojos.movie_images.Backdrops;
 import com.manmeet.moviescentralbeta.Pojos.movie_videos.VideoResults;
@@ -36,11 +38,11 @@ public class FragmentVideos extends android.support.v4.app.Fragment {
     RecyclerView mCastRecycler;
     */
     private RecyclerView mVideosRecycler;
-    private List<VideoResults> mVideosList;
-    private VideosAdapter mVideosAdapter;
+    private static List<VideoResults> mVideosList;
+    private static VideosAdapter mVideosAdapter;
     private List<Backdrops> mPhotosList;
     private String id;
-    private ApiInterface mApiInterface;
+    private static ApiInterface mApiInterface;
     private Context context;
 
     @Override
@@ -52,15 +54,13 @@ public class FragmentVideos extends android.support.v4.app.Fragment {
         id = DetailActivity.id;
         mVideosList = new ArrayList<>();
         mPhotosList = new ArrayList<>();
-        mVideosAdapter = new VideosAdapter(getContext(), mVideosList, mPhotosList);
-
+        mVideosAdapter = new VideosAdapter(getContext(), DetailActivity.mVideosList, mPhotosList);
         mApiInterface = ServiceGenerator.createService(ApiInterface.class);
         getMovieDetails(id);
         return rootView;
     }
 
     private MovieDetail getMovieDetails(String id) {
-        //Log.d(TAG, "getMovieDetails: " + id);
         Call<MovieDetail> call = mApiInterface.getMovieDetails(id, API_KEY, "images");
         call.enqueue(new Callback<MovieDetail>() {
             @Override
@@ -69,7 +69,6 @@ public class FragmentVideos extends android.support.v4.app.Fragment {
                 movieDetail = response.body();
                 UpdateDetailVideos(movieDetail);
             }
-
             @Override
             public void onFailure(Call<MovieDetail> call, Throwable t) {
                 Log.v(TAG, "onFailure()");
@@ -85,35 +84,6 @@ public class FragmentVideos extends android.support.v4.app.Fragment {
         mVideosRecycler.setLayoutManager(new LinearLayoutManager(this.getActivity(), LinearLayoutManager.VERTICAL, false));
         mVideosRecycler.setItemAnimator(new DefaultItemAnimator());
         mVideosRecycler.setAdapter(mVideosAdapter);
-        getVideos(id);
-
-    }
-
-    private void getVideos(String id) {
-        Call<Videos> call;
-        call = mApiInterface.getVideos(id, API_KEY);
-        call.enqueue(new Callback<Videos>() {
-            @Override
-            public void onResponse(Call<Videos> call, Response<Videos> response) {
-                Videos videos = response.body();
-                List<VideoResults> results = new ArrayList<>();
-                if (videos != null) {
-                    results = videos.getResults();
-                    mVideosList.clear();
-                    if (results != null && results.size() > 0) {
-                        mVideosList.addAll(results);
-                        mVideosAdapter.notifyDataSetChanged();
-                      //  Log.i("setThumbnailVideo",results.get(0).getKey().toString());
-                        ((DetailActivity)getActivity()).setThumbnailVideo(results.get(0));
-                    }
-                }
-            }
-
-            @Override
-            public void onFailure(Call<Videos> call, Throwable t) {
-                Log.d(TAG, "onFailure: Failed to get videos");
-            }
-        });
     }
 
 }
