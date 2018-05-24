@@ -16,9 +16,9 @@ With the app, you can:
 ## How to Work with the Source
 
 This app uses [The Movie Database](https://www.themoviedb.org/documentation/api) API to retrieve movies.
-You must provide your own API key in order to build the app. When you get it, just paste it to:
+You must provide your own API key in order to build the app. When you get it, just paste it in the `ApiUtility.java` file:
     ```
-    app/build.gradle
+    public static final String API_KEY = "Your Api Key";
     ```
 
 ## Libraries
