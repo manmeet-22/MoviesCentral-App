@@ -1,5 +1,6 @@
 package com.manmeet.moviescentralbeta;
 
+import android.content.Context;
 import android.content.res.Configuration;
 import android.database.Cursor;
 import android.net.ConnectivityManager;
@@ -22,11 +23,11 @@ import android.widget.Toast;
 import com.facebook.stetho.Stetho;
 import com.manmeet.moviescentralbeta.Adapters.MovieAdapter;
 import com.manmeet.moviescentralbeta.Database.MoviesContract;
+import com.manmeet.moviescentralbeta.Pojos.movie.DiscoverMovies;
+import com.manmeet.moviescentralbeta.Pojos.movie.DiscoverMoviesResults;
 import com.manmeet.moviescentralbeta.Pojos.movie_details.MovieDetail;
 import com.manmeet.moviescentralbeta.Retrofit.ApiInterface;
 import com.manmeet.moviescentralbeta.Retrofit.ServiceGenerator;
-import com.manmeet.moviescentralbeta.Pojos.movie.DiscoverMovies;
-import com.manmeet.moviescentralbeta.Pojos.movie.DiscoverMoviesResults;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,10 +49,10 @@ public class MainActivity extends AppCompatActivity {
     private MovieAdapter mMovieAdapter;
     private GridLayoutManager mLayoutManager;
     private List<DiscoverMoviesResults> movies;
-    private TextView mErrorMessage;
     private RecyclerView mRecyclerView;
+    private TextView mErrorMessage;
     private ProgressBar mProgressBar;
-    private String movieType ;
+    private String movieType;
 
 
     /*
@@ -75,14 +76,14 @@ public class MainActivity extends AppCompatActivity {
         // Check for network connectivity
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
         NetworkInfo activeNetorkInfo = connectivityManager.getActiveNetworkInfo();
-        if (activeNetorkInfo != null && !activeNetorkInfo.isConnected()) {
+        if (activeNetorkInfo != null && activeNetorkInfo.isConnectedOrConnecting()) {
+            mErrorMessage.setVisibility(View.GONE);
+            mRecyclerView.setVisibility(View.VISIBLE);
+        } else {
             mRecyclerView.setVisibility(View.GONE);
             mErrorMessage.setVisibility(View.VISIBLE);
-            mProgressBar.setVisibility(View.GONE);
-        } else {
-            mErrorMessage.setVisibility(View.GONE);
         }
-
+        mProgressBar.setVisibility(View.GONE);
         int orientation = this.getResources().getConfiguration().orientation;
         if (orientation == Configuration.ORIENTATION_PORTRAIT) {
             mLayoutManager = new GridLayoutManager(this, 2);
@@ -151,11 +152,11 @@ public class MainActivity extends AppCompatActivity {
             case R.id.favourite_main_menu_item:
                 String[] projections = new String[]{MoviesContract.MovieProvider._ID, MoviesContract.MovieProvider.MOVIE_ID};
                 Cursor cursor = getContentResolver().query(
-                        Uri.withAppendedPath(MoviesContract.BASE_URI,MoviesContract.MovieProvider.PATH_TABLE),
-                        projections,null,null,null);
+                        Uri.withAppendedPath(MoviesContract.BASE_URI, MoviesContract.MovieProvider.PATH_TABLE),
+                        projections, null, null, null);
                 cursor.moveToFirst();
                 ArrayList<String> movieIds = new ArrayList<String>();
-                for (int i=0;i<cursor.getCount();i++){
+                for (int i = 0; i < cursor.getCount(); i++) {
                     String movieId = cursor.getString(cursor.getColumnIndex(MoviesContract.MovieProvider.MOVIE_ID));
                     cursor.moveToNext();
                     movieIds.add(movieId);
@@ -176,18 +177,18 @@ public class MainActivity extends AppCompatActivity {
 
     private void getFavMovies(ArrayList<String> movieIds) {
         ApiInterface apiInterface = ServiceGenerator.createService(ApiInterface.class);
-        Call<MovieDetail> call ;
+        Call<MovieDetail> call;
         movies.clear();
-        for (int i=0;i<movieIds.size();i++){
-            call = apiInterface.getMovieDetails(movieIds.get(i),API_KEY,"images");
+        for (int i = 0; i < movieIds.size(); i++) {
+            call = apiInterface.getMovieDetails(movieIds.get(i), API_KEY, "images");
             call.enqueue(new Callback<MovieDetail>() {
                 @Override
                 public void onResponse(Call<MovieDetail> call, Response<MovieDetail> response) {
-                    if (response!=null && response.body()!=null){
+                    if (response != null && response.body() != null) {
                         MovieDetail movieDetail = response.body();
                         String id = movieDetail.getId();
                         String posterPath = movieDetail.getPosterPath();
-                        DiscoverMoviesResults results = new DiscoverMoviesResults(id,posterPath);
+                        DiscoverMoviesResults results = new DiscoverMoviesResults(id, posterPath);
                         movies.add(results);
                         mMovieAdapter.notifyDataSetChanged();
                     }
@@ -197,16 +198,21 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onFailure(Call<MovieDetail> call, Throwable t) {
                     Log.d(TAG, "onFailure: Failed to fetch Favourites");
+                    mProgressBar.setVisibility(View.GONE);
+                    mErrorMessage.setText(R.string.error_message);
                 }
 
             });
-            if(i == movieIds.size() - 1) {
+            if (i == movieIds.size() - 1) {
                 mMovieAdapter.notifyDataSetChanged();
                 Log.d(TAG, "getFavMovies: Adapter Updated");
             }
         }
-        if(movies.size() > 0) {
+        if (movies.size() > 0) {
             Log.d(TAG, "getFavMovies: size : " + movies.size());
+            mProgressBar.setVisibility(View.GONE);
+            mErrorMessage.setVisibility(View.GONE);
+            mRecyclerView.setVisibility(View.VISIBLE);
             mRecyclerView.setAdapter(mMovieAdapter);
             mMovieAdapter.notifyDataSetChanged();
         }
@@ -227,12 +233,17 @@ public class MainActivity extends AppCompatActivity {
                         movies.remove(i);
                 }
                 mRecyclerView.setAdapter(mMovieAdapter);
+                mRecyclerView.setVisibility(View.VISIBLE);
                 mProgressBar.setVisibility(View.GONE);
+                mErrorMessage.setVisibility(View.GONE);
             }
 
             @Override
             public void onFailure(Call<DiscoverMovies> call, Throwable t) {
                 Log.v(TAG, "onFailure()");
+                mProgressBar.setVisibility(View.GONE);
+                mErrorMessage.setVisibility(View.VISIBLE);
+                mErrorMessage.setText(R.string.error_message);
             }
         });
     }
@@ -245,7 +256,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putString("movie_type",movieType);
+        outState.putString("movie_type", movieType);
         outState.putParcelableArrayList("movies_list", (ArrayList<DiscoverMoviesResults>) movies);
         int index = mLayoutManager.findFirstCompletelyVisibleItemPosition();
         outState.putInt("index", index);

@@ -7,6 +7,8 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -22,12 +24,12 @@ import android.view.View;
 import android.view.WindowManager;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
 import com.manmeet.moviescentralbeta.Adapters.CategoryAdapter;
 import com.manmeet.moviescentralbeta.Adapters.GenreAdapter;
-import com.manmeet.moviescentralbeta.Adapters.MovieAdapter;
 import com.manmeet.moviescentralbeta.Adapters.ReviewsAdapter;
 import com.manmeet.moviescentralbeta.Database.MoviesContract;
 import com.manmeet.moviescentralbeta.Pojos.movie_details.Genres;
@@ -38,6 +40,8 @@ import com.manmeet.moviescentralbeta.Pojos.movie_videos.VideoResults;
 import com.manmeet.moviescentralbeta.Pojos.movie_videos.Videos;
 import com.manmeet.moviescentralbeta.Retrofit.ApiInterface;
 import com.manmeet.moviescentralbeta.Retrofit.ServiceGenerator;
+import com.nirhart.parallaxscroll.views.ParallaxExpandableListView;
+import com.nirhart.parallaxscroll.views.ParallaxScrollView;
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
@@ -88,11 +92,17 @@ public class DetailActivity extends AppCompatActivity {
     ViewPager mViewPager;
     @BindView(R.id.detail_movie_tabs)
     TabLayout mTabLayout;
+    @BindView(R.id.detail_network_error)
+    TextView mErrorMessage;
+    @BindView(R.id.detail_progressbar)
+    ProgressBar mProgressBar;
+    @BindView(R.id.detail_container)
+    ParallaxScrollView detailContainer;
     private List<Genres> mGenresList;
     private List<ReviewResults> mReviewsList;
-    private MovieAdapter mMovieAdapter;
     private GenreAdapter mGenreAdpater;
     private ReviewsAdapter mReviewsAdapter;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -103,12 +113,22 @@ public class DetailActivity extends AppCompatActivity {
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS,
                 WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS);
         getSupportActionBar().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-
+        mProgressBar.setVisibility(View.VISIBLE);
         mVideosList = new ArrayList<>();
         mApiInterface = ServiceGenerator.createService(ApiInterface.class);
         Intent input_intent = getIntent();
         id = input_intent.getStringExtra("id");
-        getMovieDetails(id);
+        ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetorkInfo = connectivityManager.getActiveNetworkInfo();
+        if (activeNetorkInfo != null && activeNetorkInfo.isConnectedOrConnecting()) {
+            mErrorMessage.setVisibility(View.GONE);
+            detailContainer.setVisibility(View.VISIBLE);
+            getMovieDetails(id);
+        } else {
+            detailContainer.setVisibility(View.GONE);
+            mErrorMessage.setVisibility(View.VISIBLE);
+            mProgressBar.setVisibility(View.GONE);
+        }
 
         CategoryAdapter categoryAdapter = new CategoryAdapter(this, getSupportFragmentManager());
 
@@ -138,11 +158,13 @@ public class DetailActivity extends AppCompatActivity {
                 MovieDetail movieDetail;
                 movieDetail = response.body();
                 UpdateDetailActivity(movieDetail);
+
             }
 
             @Override
             public void onFailure(Call<MovieDetail> call, Throwable t) {
                 Log.v(TAG, "onFailure()");
+
             }
         });
         return null;
@@ -255,6 +277,7 @@ public class DetailActivity extends AppCompatActivity {
         mGenreAdpater.notifyDataSetChanged();
 
         getReviews(id);
+        mProgressBar.setVisibility(View.GONE);
     }
 
     public void setThumbnailVideo(VideoResults videoResults) {
