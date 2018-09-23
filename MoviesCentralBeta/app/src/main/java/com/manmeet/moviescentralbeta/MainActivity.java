@@ -15,6 +15,7 @@ import android.widget.Toast;
 
 import com.manmeet.moviescentralbeta.utilities.JSONHelper;
 import com.manmeet.moviescentralbeta.utilities.NetworkHelper;
+import com.manmeet.moviescentralbeta.utilities.NetworkUtility;
 
 import org.json.JSONException;
 
@@ -31,8 +32,7 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<Movie> movieArrayList;
     private Boolean sortByRating = true;
     private Toast mToast;
-    private int mNoOfColumns ;
-
+    private int mNoOfColumns;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,22 +41,30 @@ public class MainActivity extends AppCompatActivity {
         mRecyclerView = (RecyclerView) findViewById(R.id.recycler);
         mErrorMessage = (TextView) findViewById(R.id.error_message);
         mProgressBar = (ProgressBar) findViewById(R.id.loading);
-        if( getResources().getConfiguration().orientation == 1) mNoOfColumns = 2;
-            else mNoOfColumns = 3;
+        if (getResources().getConfiguration().orientation == 1) mNoOfColumns = 2;
+        else mNoOfColumns = 3;
 
-        movieArrayList= new ArrayList<Movie>();
+        movieArrayList = new ArrayList<Movie>();
 
-        GridLayoutManager grid = new GridLayoutManager(this,mNoOfColumns);
+        GridLayoutManager grid = new GridLayoutManager(this, mNoOfColumns);
         mRecyclerView.setLayoutManager(grid);
         mRecyclerView.setHasFixedSize(true);
         mMovieAdapter = new MovieAdapter();
         mRecyclerView.setAdapter(mMovieAdapter);
-        new MovieAsyncTask().execute("okay");
+        if (NetworkUtility.isNetworkConnected(this)) {
+            mRecyclerView.setVisibility(View.VISIBLE);
+            mErrorMessage.setVisibility(View.GONE);
+            new MovieAsyncTask().execute("okay");
+        } else {
+            mErrorMessage.setVisibility(View.VISIBLE);
+            mErrorMessage.setText("No Network Connection");
+            mProgressBar.setVisibility(View.INVISIBLE);
+        }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main_menu,menu);
+        getMenuInflater().inflate(R.menu.main_menu, menu);
         return true;
     }
 
@@ -67,33 +75,58 @@ public class MainActivity extends AppCompatActivity {
 
         switch (id) {
             case R.id.refresh_main_menu_item:
-                new MovieAsyncTask().execute("Place");
-                if (mToast != null)
-                    mToast.cancel();
-                mToast = Toast.makeText(MainActivity.this, "Refresh!", Toast.LENGTH_SHORT);
-                mToast.show();
+                if (NetworkUtility.isNetworkConnected(this)) {
+                    mRecyclerView.setVisibility(View.VISIBLE);
+                    mErrorMessage.setVisibility(View.GONE);
+                    new MovieAsyncTask().execute("Place");
+                    if (mToast != null)
+                        mToast.cancel();
+                    mToast = Toast.makeText(MainActivity.this, "Refresh!", Toast.LENGTH_SHORT);
+                    mToast.show();
+                } else {
+                    mErrorMessage.setVisibility(View.VISIBLE);
+                    mErrorMessage.setText(R.string.no_network_connection);
+                    mProgressBar.setVisibility(View.INVISIBLE);
+                }
                 break;
             case R.id.recent_main_menu_item:
                 sortByRating = false;
-                new MovieAsyncTask().execute("Place");
-                if (mToast != null)
-                    mToast.cancel();
-                mToast = Toast.makeText(MainActivity.this, "Sorting By Popularity", Toast.LENGTH_SHORT);
-                mToast.show();
+                if (NetworkUtility.isNetworkConnected(this)) {
+                    mErrorMessage.setVisibility(View.GONE);
+                    mRecyclerView.setVisibility(View.VISIBLE);
+                    new MovieAsyncTask().execute("Place");
+                    if (mToast != null) {
+                        mToast.cancel();
+                    }
+                    mToast = Toast.makeText(MainActivity.this, "Sorting By Popularity", Toast.LENGTH_SHORT);
+                    mToast.show();
+                } else {
+                    mErrorMessage.setVisibility(View.VISIBLE);
+                    mErrorMessage.setText(R.string.no_network_connection);
+                    mProgressBar.setVisibility(View.INVISIBLE);
+                }
                 break;
             case R.id.rating_main_menu_item:
                 sortByRating = true;
-                new MovieAsyncTask().execute("Place");
-                if (mToast != null)
-                    mToast.cancel();
-                mToast = Toast.makeText(MainActivity.this, "Sorting By Rating", Toast.LENGTH_SHORT);
-                mToast.show();
+                if (NetworkUtility.isNetworkConnected(this)) {
+                    mRecyclerView.setVisibility(View.VISIBLE);
+                    mErrorMessage.setVisibility(View.GONE);
+                    new MovieAsyncTask().execute("Place");
+                    if (mToast != null)
+                        mToast.cancel();
+                    mToast = Toast.makeText(MainActivity.this, "Sorting By Rating", Toast.LENGTH_SHORT);
+                    mToast.show();
+                } else {
+                    mErrorMessage.setVisibility(View.VISIBLE);
+                    mErrorMessage.setText(R.string.no_network_connection);
+                    mProgressBar.setVisibility(View.INVISIBLE);
+                }
                 break;
         }
         return true;
     }
 
-    public class MovieAsyncTask extends AsyncTask<String, Void, ArrayList<Movie>>{
+    public class MovieAsyncTask extends AsyncTask<String, Void, ArrayList<Movie>> {
         @Override
         protected ArrayList<Movie> doInBackground(String... strings) {
             URL url = NetworkHelper.buildURL(sortByRating);
@@ -125,10 +158,18 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onPostExecute(ArrayList<Movie> movies) {
-            mMovieAdapter.setMovieData(movies);
             mProgressBar.setVisibility(View.INVISIBLE);
-            mRecyclerView.setVisibility(View.VISIBLE);
-        }
-    }
+            if (NetworkUtility.isNetworkConnected(getBaseContext())) {
+                mRecyclerView.setVisibility(View.VISIBLE);
+                mErrorMessage.setVisibility(View.GONE);
+                mMovieAdapter.setMovieData(movies);
+            } else {
+                mErrorMessage.setVisibility(View.VISIBLE);
+                mRecyclerView.setVisibility(View.GONE);
+                mErrorMessage.setText(R.string.no_network_connection);
+            }
 
+        }
+
+    }
 }
