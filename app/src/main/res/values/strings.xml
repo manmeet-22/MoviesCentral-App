@@ -8,9 +8,7 @@
     <string name="menu_refresh">Refresh</string>
     <string name="menu_sort_by_popularity">Sort By Popularity</string>
     <string name="menu_sort_by_rating">Sort By Rating</string>
-<<<<<<< HEAD:MoviesCentralBeta/app/src/main/res/values/strings.xml
     <string name="no_network_connection">No Network Connection</string>
-=======
     <string name="label_trailers">Trailers</string>
     <string name="label_reviews">Reviews</string>
     <string name="menu_sort_by_fav">Show Favourites</string>
@@ -20,5 +18,4 @@
     <string name="tools_movie_videos">Videos</string>
     <string name="tools_movie_user_reviews">Reviews</string>
     <string name="time_min">min</string>
->>>>>>> P2_Start:app/src/main/res/values/strings.xml
 </resources>
