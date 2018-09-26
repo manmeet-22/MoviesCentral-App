@@ -53,6 +53,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView mErrorMessage;
     private ProgressBar mProgressBar;
     private String movieType;
+    private int selectionFlag;
 
 
     /*
@@ -128,12 +129,57 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        switch (selectionFlag) {
+            case 1:
+                setTitle("Popular Movies");
+                getMovies(SORT_POPULARITY);
+                if (mToast != null)
+                    mToast.cancel();
+                mToast = Toast.makeText(MainActivity.this, "Sorting By Popularity", Toast.LENGTH_SHORT);
+                mToast.show();
+                break;
+            case 2:
+                setTitle("Top Rated Movies");
+                getMovies(SORT_TOP_RATED);
+                if (mToast != null)
+                    mToast.cancel();
+                mToast = Toast.makeText(MainActivity.this, "Sorting By Rating", Toast.LENGTH_SHORT);
+                mToast.show();
+                break;
+            case 3:
+                String[] projections = new String[]{MoviesContract.MovieProvider._ID, MoviesContract.MovieProvider.MOVIE_ID};
+                Cursor cursor = getContentResolver().query(
+                        Uri.withAppendedPath(MoviesContract.BASE_URI, MoviesContract.MovieProvider.PATH_TABLE),
+                        projections, null, null, null);
+                cursor.moveToFirst();
+                ArrayList<String> movieIds = new ArrayList<String>();
+                for (int i = 0; i < cursor.getCount(); i++) {
+                    String movieId = cursor.getString(cursor.getColumnIndex(MoviesContract.MovieProvider.MOVIE_ID));
+                    cursor.moveToNext();
+                    movieIds.add(movieId);
+                }
+                cursor.close();
+                getFavMovies(movieIds);
+                if (mToast != null)
+                    mToast.cancel();
+                mToast = Toast.makeText(MainActivity.this, "Showing Favourites", Toast.LENGTH_SHORT);
+                mToast.show();
+                mRecyclerView.setAdapter(mMovieAdapter);
+                mMovieAdapter.notifyDataSetChanged();
+                break;
+        }
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
 
         int id = item.getItemId();
 
         switch (id) {
             case R.id.recent_main_menu_item:
+                selectionFlag = 1;
                 setTitle("Popular Movies");
                 getMovies(SORT_POPULARITY);
                 if (mToast != null)
@@ -142,6 +188,7 @@ public class MainActivity extends AppCompatActivity {
                 mToast.show();
                 break;
             case R.id.rating_main_menu_item:
+                selectionFlag = 2;
                 setTitle("Top Rated Movies");
                 getMovies(SORT_TOP_RATED);
                 if (mToast != null)
@@ -150,6 +197,7 @@ public class MainActivity extends AppCompatActivity {
                 mToast.show();
                 break;
             case R.id.favourite_main_menu_item:
+                selectionFlag = 3;
                 String[] projections = new String[]{MoviesContract.MovieProvider._ID, MoviesContract.MovieProvider.MOVIE_ID};
                 Cursor cursor = getContentResolver().query(
                         Uri.withAppendedPath(MoviesContract.BASE_URI, MoviesContract.MovieProvider.PATH_TABLE),
